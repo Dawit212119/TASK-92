@@ -1,6 +1,7 @@
 package com.civicworks.domain.entity;
 
 import com.civicworks.domain.enums.Role;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -20,6 +21,7 @@ public class User {
     @Column(name = "username", nullable = false, unique = true)
     private String username;
 
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -34,7 +36,7 @@ public class User {
     @Column(name = "status", nullable = false)
     private String status = "ACTIVE";
 
-    @Column(name = "rating")
+    @Column(name = "rating", columnDefinition = "numeric(3,1)")
     private Double rating = 5.0;
 
     @CreationTimestamp

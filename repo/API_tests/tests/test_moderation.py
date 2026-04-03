@@ -66,41 +66,38 @@ class TestSensitiveWords:
 
 
 class TestCommentModeration:
-    @pytest.fixture(scope="class")
-    def content_id(self):
-        return ensure_content_item()
-
     @pytest.fixture(scope="class", autouse=True)
-    def setup_words(self, content_id):
-        """Seed two distinct sensitive words for this test class."""
-        self._word_a = f"sw-alpha-{idem()[:6]}"
-        self._word_b = f"sw-beta-{idem()[:6]}"
-        add_word(self._word_a)
-        add_word(self._word_b)
+    def _moderation_seed(self, request):
+        """Seed content item and two distinct sensitive words on the test class."""
+        request.cls._mod_content_id = ensure_content_item()
+        request.cls._word_a = f"sw-alpha-{idem()[:6]}"
+        request.cls._word_b = f"sw-beta-{idem()[:6]}"
+        add_word(request.cls._word_a)
+        add_word(request.cls._word_b)
 
-    def test_comment_no_hits_is_approved(self, content_id):
-        r = post_comment(content_id, "This is a perfectly fine comment.")
+    def test_comment_no_hits_is_approved(self):
+        r = post_comment(self._mod_content_id, "This is a perfectly fine comment.")
         assert r.status_code == 201
         assert r.json()["moderationState"] == "APPROVED"
         assert r.json()["filterHitCount"] == 0
 
-    def test_comment_one_hit_is_flagged(self, content_id):
+    def test_comment_one_hit_is_flagged(self):
         text = f"This comment mentions {self._word_a} once."
-        r = post_comment(content_id, text)
+        r = post_comment(self._mod_content_id, text)
         assert r.status_code == 201
         assert r.json()["moderationState"] == "FLAGGED"
         assert r.json()["filterHitCount"] == 1
 
-    def test_comment_two_hits_is_hold(self, content_id):
+    def test_comment_two_hits_is_hold(self):
         text = f"This has {self._word_a} and also {self._word_b} in it."
-        r = post_comment(content_id, text)
+        r = post_comment(self._mod_content_id, text)
         assert r.status_code == 201
         assert r.json()["moderationState"] == "HOLD"
         assert r.json()["filterHitCount"] == 2
 
-    def test_moderate_comment_to_approved(self, content_id):
+    def test_moderate_comment_to_approved(self):
         text = f"Flagged text: {self._word_a}"
-        comment = post_comment(content_id, text).json()
+        comment = post_comment(self._mod_content_id, text).json()
         assert comment["moderationState"] == "FLAGGED"
 
         r = api("POST", f"/api/v1/comments/{comment['id']}/moderate",
@@ -110,9 +107,9 @@ class TestCommentModeration:
         assert r.status_code == 200
         assert r.json()["moderationState"] == "APPROVED"
 
-    def test_moderate_comment_to_rejected(self, content_id):
+    def test_moderate_comment_to_rejected(self):
         text = f"Held text: {self._word_a} and {self._word_b}"
-        comment = post_comment(content_id, text).json()
+        comment = post_comment(self._mod_content_id, text).json()
         assert comment["moderationState"] == "HOLD"
 
         r = api("POST", f"/api/v1/comments/{comment['id']}/moderate",
@@ -122,8 +119,8 @@ class TestCommentModeration:
         assert r.status_code == 200
         assert r.json()["moderationState"] == "REJECTED"
 
-    def test_moderate_comment_version_conflict_returns_409(self, content_id):
-        comment = post_comment(content_id, "Normal comment.").json()
+    def test_moderate_comment_version_conflict_returns_409(self):
+        comment = post_comment(self._mod_content_id, "Normal comment.").json()
         r = api("POST", f"/api/v1/comments/{comment['id']}/moderate",
                 a=MODERATOR,
                 json={"moderationState": "APPROVED",

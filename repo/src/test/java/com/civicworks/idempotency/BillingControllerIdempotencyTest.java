@@ -83,7 +83,7 @@ class BillingControllerIdempotencyTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value("IDEMPOTENCY_KEY_REQUIRED"));
 
-        verify(billingService, never()).createBillingRun(any(), any());
+        verify(billingService, never()).createBillingRun(any(), any(), any());
     }
 
     // -----------------------------------------------------------------------
@@ -100,7 +100,7 @@ class BillingControllerIdempotencyTest {
                 .thenReturn(java.util.Optional.empty());
         when(idempotencyService.save(any(), any(), any(), anyInt(), any()))
                 .thenReturn(new com.civicworks.domain.entity.IdempotencyRecord());
-        when(billingService.createBillingRun(any(), any())).thenReturn(run);
+        when(billingService.createBillingRun(any(), any(), any())).thenReturn(run);
 
         mockMvc.perform(post(CREATE_BILLING_RUN_URL)
                         .with(csrf())
@@ -109,7 +109,7 @@ class BillingControllerIdempotencyTest {
                         .content(billingRunBody()))
                 .andExpect(status().isCreated());
 
-        verify(billingService, times(1)).createBillingRun(any(), any());
+        verify(billingService, times(1)).createBillingRun(any(), any(), eq(key));
         verify(idempotencyService).save(any(), eq(key), eq("CREATE_BILLING_RUN"), eq(201), any());
     }
 
@@ -140,7 +140,7 @@ class BillingControllerIdempotencyTest {
                 .andExpect(status().isCreated());
 
         // Service must NOT be called on replay
-        verify(billingService, never()).createBillingRun(any(), any());
+        verify(billingService, never()).createBillingRun(any(), any(), any());
         // Nothing new is saved to DB
         verify(idempotencyService, never()).save(any(), any(), any(), anyInt(), any());
     }
@@ -171,7 +171,7 @@ class BillingControllerIdempotencyTest {
                         .content(billingRunBody()))
                 .andExpect(status().isCreated());
 
-        verify(billingService, never()).createBillingRun(any(), any());
+        verify(billingService, never()).createBillingRun(any(), any(), any());
     }
 
     @Test
@@ -193,7 +193,7 @@ class BillingControllerIdempotencyTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error_code").value("IDEMPOTENCY_ACTION_CONFLICT"));
 
-        verify(billingService, never()).createBillingRun(any(), any());
+        verify(billingService, never()).createBillingRun(any(), any(), any());
     }
 
     // -----------------------------------------------------------------------

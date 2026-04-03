@@ -180,7 +180,7 @@ class SecurityRegressionTest {
             when(billingRunRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
             when(billingRunRepository.save(any(BillingRun.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            BillingRun result = billingService.createBillingRun(req, clerk);
+            BillingRun result = billingService.createBillingRun(req, clerk, null);
 
             assertThat(result.getOrganizationId()).isEqualTo(orgA);
         }

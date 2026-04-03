@@ -2,6 +2,8 @@ package com.civicworks.domain.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -27,7 +29,8 @@ public class AuditLog {
     @Column(name = "entity_ref")
     private String entityRef;
 
-    @Column(name = "details", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "details")
     private String details;
 
     @CreationTimestamp

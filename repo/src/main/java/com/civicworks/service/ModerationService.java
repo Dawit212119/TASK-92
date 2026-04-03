@@ -48,15 +48,15 @@ public class ModerationService {
     @Transactional
     public SensitiveWord addWord(CreateSensitiveWordRequest request, User actor) {
         UUID orgId = actor.getOrganization() != null ? actor.getOrganization().getId() : null;
+        if (sensitiveWordRepository.existsByOrganizationIdAndWord(orgId, request.getWord())) {
+            throw new BusinessException("Sensitive word already exists for this organization",
+                    HttpStatus.CONFLICT, "DUPLICATE_SENSITIVE_WORD");
+        }
         SensitiveWord word = new SensitiveWord();
         word.setOrganizationId(orgId);
         word.setWord(request.getWord());
         word.setReplacement(request.getReplacement());
-        try {
-            return sensitiveWordRepository.save(word);
-        } catch (Exception e) {
-            throw new BusinessException("Sensitive word already exists for this organization", HttpStatus.CONFLICT);
-        }
+        return sensitiveWordRepository.save(word);
     }
 
     @Transactional(readOnly = true)

@@ -17,11 +17,16 @@ import java.util.UUID;
 @Repository
 public interface ContentItemRepository extends JpaRepository<ContentItem, UUID> {
 
+    /** All mapped columns except generated {@code search_vector} (native queries cannot use {@code SELECT *}). */
+    String CONTENT_ITEM_COLUMNS =
+            "id, type, title, sanitized_body, tags, scheduled_at, published_at, state, version, "
+                    + "organization_id, created_by, created_at, updated_at, price_cents, origin";
+
     List<ContentItem> findByState(ContentState state);
 
     List<ContentItem> findByStateAndScheduledAtBefore(ContentState state, OffsetDateTime time);
 
-    @Query(value = "SELECT * FROM content_items WHERE search_vector @@ plainto_tsquery('english', :query) " +
+    @Query(value = "SELECT " + CONTENT_ITEM_COLUMNS + " FROM content_items WHERE search_vector @@ plainto_tsquery('english', :query) " +
             "AND (:state IS NULL OR state = :state) AND (:type IS NULL OR type = :type)",
             nativeQuery = true)
     List<ContentItem> fullTextSearch(@Param("query") String query,
@@ -41,7 +46,7 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, UUID> 
      * @param sortByCol   SQL column to sort by (validated by service before use)
      * @param sortDir     "ASC" or "DESC"
      */
-    @Query(value = "SELECT * FROM content_items " +
+    @Query(value = "SELECT " + CONTENT_ITEM_COLUMNS + " FROM content_items " +
             "WHERE search_vector @@ plainto_tsquery('english', :query) " +
             "AND (:state IS NULL OR state = :state) " +
             "AND (:type IS NULL OR type = :type) " +
@@ -102,7 +107,7 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, UUID> 
                                              Pageable pageable);
 
     /** Org-scoped full-text search (basic — no sort/price/origin filters). */
-    @Query(value = "SELECT * FROM content_items WHERE organization_id = CAST(:orgId AS UUID) " +
+    @Query(value = "SELECT " + CONTENT_ITEM_COLUMNS + " FROM content_items WHERE organization_id = CAST(:orgId AS UUID) " +
             "AND search_vector @@ plainto_tsquery('english', :query) " +
             "AND (:state IS NULL OR state = :state) AND (:type IS NULL OR type = :type)",
             nativeQuery = true)
@@ -112,7 +117,7 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, UUID> 
                                            @Param("type") String type);
 
     /** Org-scoped full-text search with full filter/sort controls. */
-    @Query(value = "SELECT * FROM content_items " +
+    @Query(value = "SELECT " + CONTENT_ITEM_COLUMNS + " FROM content_items " +
             "WHERE organization_id = CAST(:orgId AS UUID) " +
             "AND search_vector @@ plainto_tsquery('english', :query) " +
             "AND (:state IS NULL OR state = :state) " +

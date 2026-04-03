@@ -2,6 +2,7 @@ package com.civicworks.domain.entity;
 
 import com.civicworks.domain.enums.ContentState;
 import com.civicworks.domain.enums.ContentType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -63,11 +64,6 @@ public class ContentItem {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    // search_vector is a generated TSVECTOR column - never write to it
-    @Column(name = "search_vector", insertable = false, updatable = false,
-            columnDefinition = "TSVECTOR")
-    private String searchVector;
-
     /** Optional price in cents; used for price-range filter in search. */
     @Column(name = "price_cents")
     private Long priceCents;
@@ -105,9 +101,11 @@ public class ContentItem {
     public Integer getVersion() { return version; }
     public void setVersion(Integer version) { this.version = version; }
 
+    @JsonIgnore
     public Organization getOrganization() { return organization; }
     public void setOrganization(Organization organization) { this.organization = organization; }
 
+    @JsonIgnore
     public User getCreatedBy() { return createdBy; }
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
 

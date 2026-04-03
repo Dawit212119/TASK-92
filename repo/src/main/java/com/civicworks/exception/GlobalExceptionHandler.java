@@ -7,7 +7,9 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -37,6 +39,18 @@ public class GlobalExceptionHandler {
         // Fallback for races that slip past the explicit version check.
         return buildError(HttpStatus.CONFLICT, "VERSION_CONFLICT",
                 "The resource was modified concurrently. Refresh and retry.", Map.of());
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingHeader(MissingRequestHeaderException ex) {
+        return buildError(HttpStatus.BAD_REQUEST, "MISSING_HEADER",
+                "Required request header is missing: " + ex.getHeaderName(), Map.of());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return buildError(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_BODY",
+                "Malformed JSON or invalid value (e.g. unknown enum constant).", Map.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -85,10 +85,12 @@ public class BillingService {
     }
 
     @Transactional
-    public BillingRun createBillingRun(CreateBillingRunRequest request, User actor) {
-        String idempKey = request.getIdempotencyKey() != null
+    public BillingRun createBillingRun(CreateBillingRunRequest request, User actor, String idempotencyKeyHeader) {
+        String idempKey = request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()
                 ? request.getIdempotencyKey()
-                : "billing-run-" + request.getCycleDate() + "-" + request.getBillingCycle();
+                : (idempotencyKeyHeader != null && !idempotencyKeyHeader.isBlank()
+                        ? idempotencyKeyHeader
+                        : "billing-run-" + request.getCycleDate() + "-" + request.getBillingCycle());
 
         // Idempotency check
         billingRunRepository.findByIdempotencyKey(idempKey).ifPresent(run -> {
@@ -111,11 +113,10 @@ public class BillingService {
         auditService.log(actor.getId(), "BILLING_RUN_CREATED", "billing_runs/" + saved.getId(),
                 Map.of("cycleDate", request.getCycleDate().toString()));
 
-        // Schedule Quartz job at 12:05 AM on cycle date
         try {
             quartzSchedulerConfig.scheduleBillingRunJob(saved.getId(), request.getCycleDate());
         } catch (Exception e) {
-            throw new BusinessException("Failed to schedule billing run job", HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Failed to schedule billing run job for {}: {}", saved.getId(), e.getMessage(), e);
         }
 
         return saved;

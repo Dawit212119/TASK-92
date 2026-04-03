@@ -68,7 +68,7 @@ public class BillingController {
             Authentication authentication) {
         User actor = authUtils.resolveUser(authentication);
         return idempotencyGuard.execute(idempotencyKey, actor.getId(), "CREATE_BILLING_RUN", () -> {
-            BillingRun run = billingService.createBillingRun(request, actor);
+            BillingRun run = billingService.createBillingRun(request, actor, idempotencyKey);
             MDC.put("billingRunId", run.getId().toString());
             log.info("BILLING_RUN_CREATED_CONTROLLER billingRunId={} actor={}", run.getId(), actor.getUsername());
             MDC.remove("billingRunId");

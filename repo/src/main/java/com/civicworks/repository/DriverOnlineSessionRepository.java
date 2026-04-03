@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface DriverOnlineSessionRepository extends JpaRepository<DriverOnlineSession, UUID> {
 
     @Query(value = "SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (COALESCE(session_end, NOW()) - session_start))/60), 0) " +
-            "FROM driver_online_sessions WHERE driver_id = :driverId AND session_start::date = :date",
+            "FROM driver_online_sessions WHERE driver_id = :driverId AND CAST(session_start AS date) = :date",
             nativeQuery = true)
     Double sumMinutesForDriverOnDate(@Param("driverId") UUID driverId, @Param("date") LocalDate date);
 }

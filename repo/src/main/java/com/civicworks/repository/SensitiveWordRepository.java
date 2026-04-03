@@ -15,4 +15,6 @@ public interface SensitiveWordRepository extends JpaRepository<SensitiveWord, UU
     List<SensitiveWord> findByOrganizationId(UUID organizationId);
 
     Page<SensitiveWord> findByOrganizationId(UUID organizationId, Pageable pageable);
+
+    boolean existsByOrganizationIdAndWord(UUID organizationId, String word);
 }

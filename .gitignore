@@ -32,3 +32,6 @@ Thumbs.db
 .idea/
 *.iml
 *.class
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
