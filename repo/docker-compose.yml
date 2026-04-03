@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: civicworks
+      POSTGRES_USER: civicworks
+      POSTGRES_PASSWORD: civicworks
+    ports:
+      - "5432:5432"
+    volumes:
+      - civicworks_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U civicworks -d civicworks"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    # Host 8080 is often already in use; default to 18080. Override: HOST_APP_PORT=8080 docker compose up
+    ports:
+      - "${HOST_APP_PORT:-18080}:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/civicworks
+      SPRING_DATASOURCE_USERNAME: civicworks
+      SPRING_DATASOURCE_PASSWORD: civicworks
+      # AES-256 key for field-level encryption of residentId (Base64, 32 bytes, dev value only)
+      RESIDENT_ID_ENCRYPTION_KEY: "Y2l2aWN3b3Jrcy1kZXYtYWVzMjU2LXNlY3JldC1rZXk="
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/actuator/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  backup:
+    image: postgres:16-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - civicworks_backups:/backups
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-civicworks}
+    entrypoint: >
+      sh -c "while true; do
+        pg_dump -h db -U ${POSTGRES_USER:-civicworks} ${POSTGRES_DB:-civicworks}
+          | gzip > /backups/civicworks_$$(date +%Y%m%d_%H%M%S).sql.gz;
+        find /backups -name '*.sql.gz' -mtime +7 -delete;
+        sleep 86400;
+      done"
+
+volumes:
+  civicworks_data:
+  civicworks_backups:

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!--
+        Register SensitiveDataMaskingConverter as the %maskedMsg conversion word.
+        It replaces %msg in every appender pattern so that values following
+        "residentId=" or "resident_id=" are masked as "***" before writing.
+    -->
+    <conversionRule conversionWord="maskedMsg"
+                    converterClass="com.civicworks.config.SensitiveDataMaskingConverter"/>
+
+    <!--
+        Shared layout pattern — identical to the Spring Boot default pattern
+        used previously via logging.pattern.console in application.yml, except
+        %msg is replaced by %maskedMsg.
+    -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [rid=%X{requestId:--} usr=%X{userId:--} %X{method:--} %X{path:--}] - %maskedMsg%n"/>
+
+    <!-- ── Console appender ──────────────────────────────────────────────── -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ── Rolling file appender ────────────────────────────────────────── -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/civicworks.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily roll-over; keep 30 days of history -->
+            <fileNamePattern>logs/civicworks.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ── Root logger ───────────────────────────────────────────────────── -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+    <!-- Reduce noise from framework internals -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.hibernate"       level="WARN"/>
+    <logger name="org.quartz"          level="WARN"/>
+    <logger name="com.civicworks"      level="INFO"/>
+
+</configuration>

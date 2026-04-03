@@ -1,0 +1,33 @@
+# Excluded explicitly
+68e4c34c-59f2-4c0d-afd0-4e67bbb35981.jsonl
+convert_ai_session.py
+
+# Local AI / editor session dumps
+sessions/
+.claude/
+.cursor/
+
+# Java / Maven
+repo/target/
+repo/.tmp/
+repo/logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets & local env
+.env
+.env.local
+.env.*.local
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+*.iml
+*.class

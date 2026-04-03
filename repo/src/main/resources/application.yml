@@ -1,0 +1,52 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/civicworks}
+    username: ${SPRING_DATASOURCE_USERNAME:civicworks}
+    password: ${SPRING_DATASOURCE_PASSWORD:civicworks}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org.quartz.jobStore.isClustered: false
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.scheduler.instanceName: CivicWorksScheduler
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.threadPool.threadCount: 5
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+notification:
+  outbox:
+    email-enabled: false
+    sms-enabled: false
+    im-enabled: false
+
+logging:
+  pattern:
+    # requestId, userId (auth name), method, path come from MdcLoggingFilter (@Order 1).
+    # Values shown as "-" when not present (e.g. anonymous or health-check requests).
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [rid=%X{requestId:--} usr=%X{userId:--} %X{method:--} %X{path:--}] - %msg%n"
+  level:
+    root: INFO
+    com.civicworks: INFO

@@ -1,0 +1,10 @@
+{
+  "prompt_file": "docs/prompt.md",
+  "project_type": "server",
+  "frontend_language": "none",
+  "backend_language": "java",
+  "frontend_framework": "none",
+  "backend_framework": "spring-boot",
+  "database": "postgresql",
+  "offline_first": true
+}

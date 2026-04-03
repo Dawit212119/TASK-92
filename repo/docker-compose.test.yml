@@ -1,0 +1,9 @@
+services:
+  api-tests:
+    build:
+      context: ./API_tests
+    environment:
+      BASE_URL: "http://app:8080"
+    depends_on:
+      app:
+        condition: service_healthy
