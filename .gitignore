@@ -1,8 +1,10 @@
 # Excluded explicitly
 68e4c34c-59f2-4c0d-afd0-4e67bbb35981.jsonl
+9d5c8f47-2cb5-4f8a-a44b-be4e8a2fda02.jsonl
 convert_ai_session.py
 
 # Local AI / editor session dumps
+
 .claude/
 .cursor/
 
