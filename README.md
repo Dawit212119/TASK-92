@@ -4,11 +4,14 @@ Offline-first municipal community services platform.
 
 ## Quick Start
 
+`docker-compose.yml` lives in the **`repo`** subdirectory. From the repository/task root:
+
 ```bash
+cd repo
 docker compose up --build
 ```
 
-The application is published on the host at **http://localhost:18080** by default (container still listens on 8080 inside the network). Another process on your machine may already use 8080; this mapping avoids that conflict. To use host port 8080 instead, run: `HOST_APP_PORT=8080 docker compose up` (PowerShell: `$env:HOST_APP_PORT=8080; docker compose up`).
+The application is published on the host at **http://localhost:18080** by default (container still listens on 8080 inside the network). Another process on your machine may already use 8080; this mapping avoids that conflict. To use host port 8080 instead, run from `repo`: `HOST_APP_PORT=8080 docker compose up` (PowerShell: `$env:HOST_APP_PORT=8080; docker compose up`).
 
 The PostgreSQL database runs on host port **5432**.
 
@@ -45,21 +48,26 @@ HTTP Basic Auth on every request.
 - GET /api/v1/content/items/{id}/publish-history - Publish history (authenticated)
 
 ### Billing
+- GET /api/v1/billing/bills - List bills (BILLING_CLERK, AUDITOR, SYSTEM_ADMIN)
+- GET /api/v1/billing/bills/{billId}/ledger - Bill ledger (BILLING_CLERK, AUDITOR, SYSTEM_ADMIN)
 - POST /api/v1/billing/fee-items - Create fee item (BILLING_CLERK, SYSTEM_ADMIN)
 - POST /api/v1/billing/billing-runs - Create billing run (BILLING_CLERK, SYSTEM_ADMIN)
-- POST /api/v1/billing/bills/{billId}/late-fee/apply - Apply late fee (BILLING_CLERK)
-- POST /api/v1/billing/bills/{billId}/discount - Apply discount (BILLING_CLERK)
-- POST /api/v1/billing/bills/{billId}/settlements - Create settlement (BILLING_CLERK)
-- POST /api/v1/billing/payments/{paymentId}/refunds - Issue refund (BILLING_CLERK)
-- POST /api/v1/billing/shifts/{shiftId}/handover - Submit shift handover (BILLING_CLERK)
+- POST /api/v1/billing/bills/{billId}/late-fee/apply - Apply late fee (BILLING_CLERK, SYSTEM_ADMIN)
+- POST /api/v1/billing/bills/{billId}/discount - Apply discount (BILLING_CLERK, SYSTEM_ADMIN)
+- POST /api/v1/billing/bills/{billId}/settlements - Create settlement (BILLING_CLERK, SYSTEM_ADMIN)
+- POST /api/v1/billing/payments/{paymentId}/refunds - Issue refund (BILLING_CLERK, SYSTEM_ADMIN)
+- POST /api/v1/billing/shifts/{shiftId}/handover - Submit shift handover (BILLING_CLERK, SYSTEM_ADMIN)
 - GET /api/v1/billing/discrepancies - List discrepancy cases (BILLING_CLERK, AUDITOR, SYSTEM_ADMIN)
 - POST /api/v1/billing/discrepancies/{caseId}/resolve - Resolve discrepancy (BILLING_CLERK, SYSTEM_ADMIN)
 
 ### Dispatch
-- POST /api/v1/dispatch/orders - Create order (DISPATCHER, DRIVER)
-- POST /api/v1/dispatch/orders/{orderId}/accept - Accept order (DRIVER)
-- POST /api/v1/dispatch/orders/{orderId}/reject - Reject order (DRIVER)
-- GET /api/v1/drivers/{driverId}/eligibility - Driver eligibility (DISPATCHER, DRIVER)
+- POST /api/v1/dispatch/orders - Create order (DISPATCHER, DRIVER, SYSTEM_ADMIN)
+- GET /api/v1/dispatch/orders/{orderId} - Get order (authenticated)
+- POST /api/v1/dispatch/orders/{orderId}/accept - Accept order (DRIVER, SYSTEM_ADMIN)
+- POST /api/v1/dispatch/orders/{orderId}/reject - Reject order (DRIVER, SYSTEM_ADMIN)
+- POST /api/v1/dispatch/orders/{orderId}/reassign - Reassign assigned order after 30 minutes (DISPATCHER, SYSTEM_ADMIN)
+- GET /api/v1/dispatch/queues?zoneId={uuid} - Zone wait queue (DISPATCHER, DRIVER, SYSTEM_ADMIN)
+- GET /api/v1/drivers/{driverId}/eligibility - Driver eligibility (DISPATCHER, DRIVER, SYSTEM_ADMIN)
 
 #### Create order — required fields
 
@@ -99,11 +107,18 @@ Body:
 ```
 
 ### Search
-- GET /api/v1/search/typeahead?q={query} - Full-text search (authenticated)
-- GET /api/v1/search/typeahead/filter?q={query}&category=&origin=&minPrice=&maxPrice=&sortBy=&sortDir= - Filtered search with category, origin, price range, and sort (authenticated)
+- GET /api/v1/search/typeahead?q={query} - Full-text typeahead (authenticated)
+- GET /api/v1/search/typeahead/filter?q={query}&category=&origin=&minPrice=&maxPrice=&sortBy=&sortDir= - Filtered search (authenticated)
+- GET /api/v1/search/typeahead/suggestions?q={prefix} - Recent query suggestions for the user (authenticated)
+- POST /api/v1/search/history - Record a search query (authenticated)
+- GET /api/v1/search/history - Paginated search history (authenticated)
+- GET /api/v1/search/history/retention - Retention policy info (SYSTEM_ADMIN, MODERATOR)
+
+### Reports
+- GET /api/v1/reports/kpi - Latest KPI / arrears reports (AUDITOR sees own org; SYSTEM_ADMIN sees all orgs)
 
 ### Audit
-- GET /api/v1/audit/logs - Audit logs (AUDITOR, SYSTEM_ADMIN)
+- GET /api/v1/audit/logs - Audit logs (AUDITOR sees own org; SYSTEM_ADMIN sees all)
 
 ## Backups
 
