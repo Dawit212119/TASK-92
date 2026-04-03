@@ -36,6 +36,9 @@ public class BillingRun {
     @Column(name = "requested_by")
     private String requestedBy;
 
+    @Column(name = "organization_id")
+    private UUID organizationId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -63,6 +66,9 @@ public class BillingRun {
 
     public String getRequestedBy() { return requestedBy; }
     public void setRequestedBy(String requestedBy) { this.requestedBy = requestedBy; }
+
+    public UUID getOrganizationId() { return organizationId; }
+    public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }

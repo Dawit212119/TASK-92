@@ -63,8 +63,9 @@ public class ContentItem {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    // search_vector is a generated column - never write to it
-    @Column(name = "search_vector", insertable = false, updatable = false)
+    // search_vector is a generated TSVECTOR column - never write to it
+    @Column(name = "search_vector", insertable = false, updatable = false,
+            columnDefinition = "TSVECTOR")
     private String searchVector;
 
     /** Optional price in cents; used for price-range filter in search. */

@@ -95,12 +95,14 @@ public class BillingService {
             throw new BusinessException("Billing run already exists with idempotency key: " + idempKey, HttpStatus.CONFLICT);
         });
 
+        UUID orgId = AuthorizationService.resolveOrgId(actor);
         BillingRun run = new BillingRun();
         run.setCycleDate(request.getCycleDate());
         run.setBillingCycle(request.getBillingCycle());
         run.setStatus(BillingRunStatus.PENDING);
         run.setIdempotencyKey(idempKey);
         run.setRequestedBy(actor.getUsername());
+        run.setOrganizationId(orgId);
 
         BillingRun saved = billingRunRepository.save(run);
 
@@ -140,7 +142,9 @@ public class BillingService {
         log.info("BILLING_RUN_EXECUTING billingRunId={}", billingRunId);
 
         try {
-            List<Account> accounts = accountRepository.findAll();
+            List<Account> accounts = run.getOrganizationId() != null
+                    ? accountRepository.findByOrganizationId(run.getOrganizationId())
+                    : accountRepository.findAll();
             // Pre-load existing bills for this run to skip already-generated accounts
             java.util.Set<UUID> alreadyBilled = billRepository.findByBillingRunId(billingRunId)
                     .stream().map(Bill::getAccountId).collect(java.util.stream.Collectors.toSet());

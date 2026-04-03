@@ -3,7 +3,7 @@ package com.civicworks.controller;
 import com.civicworks.config.AuthUtils;
 import com.civicworks.config.IdempotencyGuard;
 import com.civicworks.domain.entity.*;
-import com.civicworks.domain.enums.Role;
+import com.civicworks.service.AuthorizationService;
 import com.civicworks.domain.enums.DiscrepancyStatus;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.civicworks.dto.*;
@@ -85,9 +85,7 @@ public class BillingController {
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
         User actor = authUtils.resolveUser(authentication);
-        // SYSTEM_ADMIN is always global (orgId=null); other roles are scoped to their org.
-        UUID orgId = actor.getRole() == Role.SYSTEM_ADMIN ? null
-                : (actor.getOrganization() != null ? actor.getOrganization().getId() : null);
+        UUID orgId = AuthorizationService.resolveOrgId(actor);
         Page<Bill> result = billingService.findBillsPage(orgId, account_id, status, page, size);
         return ResponseEntity.ok(Map.of(
                 "data", result.getContent(),
@@ -155,8 +153,7 @@ public class BillingController {
     public ResponseEntity<Map<String, Object>> getBillLedger(@PathVariable UUID billId,
                                                               Authentication authentication) {
         User actor = authUtils.resolveUser(authentication);
-        UUID orgId = actor.getRole() == Role.SYSTEM_ADMIN ? null
-                : (actor.getOrganization() != null ? actor.getOrganization().getId() : null);
+        UUID orgId = AuthorizationService.resolveOrgId(actor);
         Bill bill = billingService.findBillById(billId, orgId);
         List<Payment> payments = paymentService.findPaymentsForBill(billId);
         return ResponseEntity.ok(Map.of("bill", bill, "payments", payments));

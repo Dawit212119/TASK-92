@@ -66,6 +66,15 @@ public class DispatchService {
 
     @Transactional
     public DispatchOrder createOrder(CreateDispatchOrderRequest request, User actor) {
+        // Only DISPATCHER and SYSTEM_ADMIN may create forced-dispatch orders
+        if (request.isForcedFlag() && request.getAssignedDriverId() != null) {
+            if (actor.getRole() != Role.DISPATCHER && actor.getRole() != Role.SYSTEM_ADMIN) {
+                throw new BusinessException(
+                        "Only DISPATCHER or SYSTEM_ADMIN can create forced dispatch orders",
+                        HttpStatus.FORBIDDEN, "FORCED_DISPATCH_FORBIDDEN");
+            }
+        }
+
         Zone zone = zoneRepository.findById(request.getZoneId())
                 .orElseThrow(() -> new ResourceNotFoundException("Zone", request.getZoneId()));
 
