@@ -48,6 +48,7 @@ class ContentServiceVersionTest {
         actor = new User();
         actor.setId(UUID.randomUUID());
         actor.setUsername("editor");
+        actor.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
     }
 
     // -----------------------------------------------------------------------

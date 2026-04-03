@@ -57,6 +57,7 @@ class DispatchServiceVersionTest {
         driver = new User();
         driver.setId(driverId);
         driver.setRating(4.8);
+        driver.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
 
         // Driver eligibility stubs (let it pass eligibility check)
         when(userRepository.findById(driverId)).thenReturn(Optional.of(driver));

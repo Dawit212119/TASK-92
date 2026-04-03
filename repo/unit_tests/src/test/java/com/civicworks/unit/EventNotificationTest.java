@@ -169,6 +169,7 @@ class EventNotificationTest {
 
         User actor = new User();
         actor.setId(UUID.randomUUID());
+        actor.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
 
         paymentService.createSettlement(billId, req, actor);
 
@@ -198,6 +199,7 @@ class EventNotificationTest {
 
         User dispatcher = new User();
         dispatcher.setId(UUID.randomUUID());
+        dispatcher.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
 
         dispatchService.createOrder(request, dispatcher);
 
@@ -222,6 +224,7 @@ class EventNotificationTest {
         User driver = new User();
         driver.setId(driverId);
         driver.setRating(4.8);
+        driver.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
         when(userRepository.findById(driverId)).thenReturn(Optional.of(driver));
         when(driverOnlineSessionRepository.sumMinutesForDriverOnDate(eq(driverId), any(LocalDate.class))).thenReturn(60.0);
         when(driverCooldownRepository.existsByDriverIdAndCooldownUntilAfter(eq(driverId), any(OffsetDateTime.class))).thenReturn(false);

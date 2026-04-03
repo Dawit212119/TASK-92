@@ -82,6 +82,7 @@ class DispatchDistanceTest {
         driver = new User();
         driver.setId(driverId);
         driver.setRating(4.8); // above MIN_DRIVER_RATING
+        driver.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
 
         // Stub eligibility prerequisites so the driver passes all non-distance checks
         when(userRepository.findById(driverId)).thenReturn(Optional.of(driver));

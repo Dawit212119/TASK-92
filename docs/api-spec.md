@@ -415,8 +415,8 @@ Request:
 Server behavior:
 * Compare submitted totals against posted A/R for the shift.
 * If absolute delta > $1.00, create a `discrepancy_case` and:
-  * assign it to `BILLING_CLERK`
-  * require `AUDITOR` oversight (read-only review + explicit sign-off)
+  * assign it to `BILLING_CLERK` for resolution
+  * `AUDITOR` provides read-only oversight (can view discrepancy list and audit logs, but cannot mutate)
 
 Response:
 ```json
@@ -429,7 +429,7 @@ Response:
 
 `GET /billing/discrepancies?status=&from=&to=`
 
-Requires `BILLING_CLERK` (and `AUDITOR` can view without mutation).
+Requires `BILLING_CLERK`, `AUDITOR`, or `SYSTEM_ADMIN`. `AUDITOR` has read-only access for review purposes.
 
 `POST /billing/discrepancies/{caseId}/resolve`
 
@@ -442,7 +442,7 @@ Request:
 }
 ```
 
-Requires `AUDITOR` to finalize sign-off.
+Requires `BILLING_CLERK` or `SYSTEM_ADMIN`. Auditor oversight is read-only via the discrepancy list and audit log endpoints.
 
 ## 8. Dispatch Orders and Driver Eligibility
 
@@ -572,6 +572,6 @@ Channels are configurable but disabled by default and only write to an outbox ta
 11. Zone capacity enforcement: `POST /dispatch/orders` returns `status=QUEUED` when capacity is reached.
 12. Payment split rounding issues: `POST /billing/bills/{billId}/settlements` allocates remainder cents to the first payer.
 13. Refund and reversal constraints: `POST /billing/payments/{paymentId}/refunds` supports partial refunds.
-14. Discrepancy workflow ownership: `POST /billing/shifts/{shiftId}/handover` creates discrepancy cases assigned to Billing Clerk with Auditor sign-off.
+14. Discrepancy workflow ownership: `POST /billing/shifts/{shiftId}/handover` creates discrepancy cases assigned to Billing Clerk for resolution (BILLING_CLERK or SYSTEM_ADMIN). Auditor provides read-only oversight via discrepancy list and audit logs.
 15. Search history retention enforcement: search history is purged by scheduled deletion older than 90 days (see `GET /search/history/retention`).
 

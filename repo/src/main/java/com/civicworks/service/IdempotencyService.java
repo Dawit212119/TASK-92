@@ -1,7 +1,9 @@
 package com.civicworks.service;
 
 import com.civicworks.domain.entity.IdempotencyRecord;
+import com.civicworks.exception.BusinessException;
 import com.civicworks.repository.IdempotencyRecordRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,8 +20,17 @@ public class IdempotencyService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<IdempotencyRecord> findExisting(UUID userId, String key) {
-        return repository.findByUserIdAndIdempotencyKey(userId, key);
+    public Optional<IdempotencyRecord> findExisting(UUID userId, String key, String actionType) {
+        return repository.findByUserIdAndIdempotencyKeyAndActionType(userId, key, actionType);
+    }
+
+    @Transactional(readOnly = true)
+    public void checkForActionConflict(UUID userId, String key, String actionType) {
+        if (repository.existsByUserIdAndIdempotencyKeyAndActionTypeNot(userId, key, actionType)) {
+            throw new BusinessException(
+                    "Idempotency key already used for a different action type",
+                    HttpStatus.CONFLICT, "IDEMPOTENCY_ACTION_CONFLICT");
+        }
     }
 
     @Transactional

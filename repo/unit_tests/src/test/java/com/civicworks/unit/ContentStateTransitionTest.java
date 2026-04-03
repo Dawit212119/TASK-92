@@ -61,6 +61,7 @@ class ContentStateTransitionTest {
 
         actor = new User();
         actor.setId(UUID.randomUUID());
+        actor.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
 
         when(contentItemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(snapshotRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

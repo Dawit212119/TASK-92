@@ -96,7 +96,7 @@ class BillingControllerIdempotencyTest {
         String key = UUID.randomUUID().toString();
         BillingRun run = fakeBillingRun();
 
-        when(idempotencyService.findExisting(any(), eq(key)))
+        when(idempotencyService.findExisting(any(), eq(key), eq("CREATE_BILLING_RUN")))
                 .thenReturn(java.util.Optional.empty());
         when(idempotencyService.save(any(), any(), any(), anyInt(), any()))
                 .thenReturn(new com.civicworks.domain.entity.IdempotencyRecord());
@@ -129,7 +129,7 @@ class BillingControllerIdempotencyTest {
         cached.setResponseStatus(201);
         cached.setResponseBody(objectMapper.writeValueAsString(run));
 
-        when(idempotencyService.findExisting(any(), eq(key)))
+        when(idempotencyService.findExisting(any(), eq(key), eq("CREATE_BILLING_RUN")))
                 .thenReturn(java.util.Optional.of(cached));
 
         mockMvc.perform(post(CREATE_BILLING_RUN_URL)
@@ -143,6 +143,57 @@ class BillingControllerIdempotencyTest {
         verify(billingService, never()).createBillingRun(any(), any());
         // Nothing new is saved to DB
         verify(idempotencyService, never()).save(any(), any(), any(), anyInt(), any());
+    }
+
+    // -----------------------------------------------------------------------
+    // Same key + different action → 409
+    // -----------------------------------------------------------------------
+
+    @Test
+    @WithMockUser(roles = "BILLING_CLERK")
+    void createBillingRun_sameKeySameAction_replaysOriginal() throws Exception {
+        String key = UUID.randomUUID().toString();
+        BillingRun run = fakeBillingRun();
+
+        com.civicworks.domain.entity.IdempotencyRecord cached =
+                new com.civicworks.domain.entity.IdempotencyRecord();
+        cached.setResponseStatus(201);
+        cached.setActionType("CREATE_BILLING_RUN");
+        cached.setResponseBody(objectMapper.writeValueAsString(run));
+
+        when(idempotencyService.findExisting(any(), eq(key), eq("CREATE_BILLING_RUN")))
+                .thenReturn(java.util.Optional.of(cached));
+
+        mockMvc.perform(post(CREATE_BILLING_RUN_URL)
+                        .with(csrf())
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(billingRunBody()))
+                .andExpect(status().isCreated());
+
+        verify(billingService, never()).createBillingRun(any(), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "BILLING_CLERK")
+    void createBillingRun_sameKeyDifferentAction_returns409() throws Exception {
+        String key = UUID.randomUUID().toString();
+
+        // Simulate: key was already used for a different action
+        doThrow(new BusinessException(
+                "Idempotency key already used for a different action type",
+                HttpStatus.CONFLICT, "IDEMPOTENCY_ACTION_CONFLICT"))
+                .when(idempotencyService).checkForActionConflict(any(), eq(key), eq("CREATE_BILLING_RUN"));
+
+        mockMvc.perform(post(CREATE_BILLING_RUN_URL)
+                        .with(csrf())
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(billingRunBody()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error_code").value("IDEMPOTENCY_ACTION_CONFLICT"));
+
+        verify(billingService, never()).createBillingRun(any(), any());
     }
 
     // -----------------------------------------------------------------------

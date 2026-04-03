@@ -201,6 +201,7 @@ class ForcedDispatchHijackTest {
     private User user(UUID id) {
         User u = new User();
         u.setId(id);
+        u.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
         return u;
     }
 

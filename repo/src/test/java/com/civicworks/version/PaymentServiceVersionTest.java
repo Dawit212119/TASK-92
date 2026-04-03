@@ -58,6 +58,7 @@ class PaymentServiceVersionTest {
                 discrepancyCaseRepository, userRepository, auditService, notificationService);
         actor.setId(UUID.randomUUID());
         actor.setUsername("clerk");
+        actor.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
     }
 
     // -----------------------------------------------------------------------

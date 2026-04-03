@@ -2,7 +2,9 @@ package com.civicworks.service;
 
 import com.civicworks.domain.entity.User;
 import com.civicworks.domain.enums.Role;
+import com.civicworks.exception.BusinessException;
 import com.civicworks.exception.ResourceNotFoundException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -20,24 +22,31 @@ import java.util.UUID;
  * <ul>
  *   <li>{@code actor == null} — scheduler / system call → global access</li>
  *   <li>{@code actor.role == SYSTEM_ADMIN} → global access</li>
- *   <li>{@code actor.organization == null} — unscoped user → global access (no org to restrict to)</li>
  * </ul>
  *
- * All other actors are restricted to entities whose {@code organizationId}
- * matches their own.  A mismatch throws {@link ResourceNotFoundException}
- * (returns HTTP 404 to the caller, preventing enumeration).
+ * Non-admin actors without an organization assignment are rejected with
+ * HTTP 403 (fail closed). All other actors are restricted to entities
+ * whose {@code organizationId} matches their own.  A mismatch throws
+ * {@link ResourceNotFoundException} (returns HTTP 404 to the caller,
+ * preventing enumeration).
  */
 @Service
 public class AuthorizationService {
 
     /**
      * Resolves the effective org-id for tenant isolation.
-     * Returns {@code null} when the caller has global access.
+     * Returns {@code null} when the caller has global access (SYSTEM_ADMIN or system actor).
+     * Non-admin users without an organization are rejected (fail closed).
      */
     public static UUID resolveOrgId(User actor) {
         if (actor == null) return null;
         if (actor.getRole() == Role.SYSTEM_ADMIN) return null;
-        return actor.getOrganization() != null ? actor.getOrganization().getId() : null;
+        if (actor.getOrganization() == null) {
+            throw new BusinessException(
+                    "User account has no organization assignment; tenant-scoped access denied",
+                    HttpStatus.FORBIDDEN, "MISSING_ORGANIZATION");
+        }
+        return actor.getOrganization().getId();
     }
 
     /**

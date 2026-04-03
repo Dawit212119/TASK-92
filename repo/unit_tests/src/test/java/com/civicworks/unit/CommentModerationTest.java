@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -161,16 +162,14 @@ class CommentModerationTest {
     // ── no org → no filtering ─────────────────────────────────────────────────
 
     @Test
-    void userWithoutOrg_noFilteringApplied_commentApproved() {
+    void userWithoutOrg_isDeniedAccess() {
         User noOrgUser = new User();
         noOrgUser.setId(UUID.randomUUID());
-        // organization is null
+        noOrgUser.setRole(com.civicworks.domain.enums.Role.CONTENT_EDITOR);
+        // organization is null → non-admin users without org are denied
 
-        Comment result = createComment("Any text at all.", noOrgUser);
-
-        // sensitiveWordRepository should NOT be queried for a null org
-        verify(sensitiveWordRepository, never()).findByOrganizationId(any());
-        assertThat(result.getModerationState()).isEqualTo(ModerationState.APPROVED);
+        assertThatThrownBy(() -> createComment("Any text at all.", noOrgUser))
+                .isInstanceOf(com.civicworks.exception.BusinessException.class);
     }
 
     // ── persisted fields ──────────────────────────────────────────────────────

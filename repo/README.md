@@ -52,7 +52,8 @@ HTTP Basic Auth on every request.
 - POST /api/v1/billing/bills/{billId}/settlements - Create settlement (BILLING_CLERK)
 - POST /api/v1/billing/payments/{paymentId}/refunds - Issue refund (BILLING_CLERK)
 - POST /api/v1/billing/shifts/{shiftId}/handover - Submit shift handover (BILLING_CLERK)
-- POST /api/v1/billing/discrepancies/{caseId}/resolve - Resolve discrepancy (AUDITOR)
+- GET /api/v1/billing/discrepancies - List discrepancy cases (BILLING_CLERK, AUDITOR, SYSTEM_ADMIN)
+- POST /api/v1/billing/discrepancies/{caseId}/resolve - Resolve discrepancy (BILLING_CLERK, SYSTEM_ADMIN)
 
 ### Dispatch
 - POST /api/v1/dispatch/orders - Create order (DISPATCHER, DRIVER)
@@ -99,6 +100,7 @@ Body:
 
 ### Search
 - GET /api/v1/search/typeahead?q={query} - Full-text search (authenticated)
+- GET /api/v1/search/typeahead/filter?q={query}&category=&origin=&minPrice=&maxPrice=&sortBy=&sortDir= - Filtered search with category, origin, price range, and sort (authenticated)
 
 ### Audit
 - GET /api/v1/audit/logs - Audit logs (AUDITOR, SYSTEM_ADMIN)

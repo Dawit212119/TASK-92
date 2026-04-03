@@ -37,20 +37,18 @@ if (-not $NoRebuild) {
     docker compose up -d
 }
 
-# ── 2. Wait for app to accept connections ─────────────────────────────────────
-# Must match docker-compose default HOST_APP_PORT (18080) for host-side TCP check
+# ── 2. Wait for actuator health, then Flyway schema (avoids seeding empty DB) ─
 $HostAppPort = if ($env:HOST_APP_PORT) { [int]$env:HOST_APP_PORT } else { 18080 }
-Info "Waiting for app on host port $HostAppPort..."
-$MaxWait = 120
+$HealthUrl = "http://127.0.0.1:$HostAppPort/actuator/health"
+Info "Waiting for app health at $HealthUrl ..."
+$MaxWait = 180
 $Waited  = 0
 $Ready   = $false
 
 while (-not $Ready -and $Waited -lt $MaxWait) {
     try {
-        $tcp = New-Object System.Net.Sockets.TcpClient
-        $tcp.Connect("localhost", $HostAppPort)
-        $tcp.Close()
-        $Ready = $true
+        $resp = Invoke-WebRequest -Uri $HealthUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+        if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 300) { $Ready = $true }
     } catch {
         Start-Sleep -Seconds 3
         $Waited += 3
@@ -60,12 +58,32 @@ while (-not $Ready -and $Waited -lt $MaxWait) {
 Write-Host ""
 
 if (-not $Ready) {
-    Fail "App did not start within ${MaxWait}s. Showing logs:"
+    Fail "App did not become healthy within ${MaxWait}s. Showing logs:"
     docker compose logs app | Select-Object -Last 40
     exit 1
 }
-Info "App is up (waited ${Waited}s). Waiting 5s for migrations..."
-Start-Sleep -Seconds 5
+Info "App healthy (waited ${Waited}s). Waiting for Flyway table 'accounts' in Postgres..."
+
+$MaxSchema = 120
+$SchemaWait = 0
+$SchemaOk = $false
+while (-not $SchemaOk -and $SchemaWait -lt $MaxSchema) {
+    $checkSql = "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='accounts'"
+    $out = docker compose exec -T db psql -U civicworks -d civicworks -tAc "$checkSql" 2>$null
+    if (($out -replace '\s', '') -eq '1') { $SchemaOk = $true } else {
+        Start-Sleep -Seconds 2
+        $SchemaWait += 2
+        Write-Host -NoNewline "."
+    }
+}
+Write-Host ""
+
+if (-not $SchemaOk) {
+    Fail "accounts table not found after ${MaxSchema}s. Showing app logs:"
+    docker compose logs app | Select-Object -Last 50
+    exit 1
+}
+Info "Database schema ready (waited ${SchemaWait}s)."
 
 # ── 3. Seed test data ────────────────────────────────────────────────────────
 Info "Seeding test data..."
@@ -77,7 +95,7 @@ Info "========================================="
 Info "Running unit tests (Maven / JUnit)..."
 Info "========================================="
 
-$MvnOutput = & mvn test 2>&1
+$MvnOutput = & mvn -B test 2>&1
 $MvnOutput | Write-Host
 
 if ($LASTEXITCODE -eq 0) {

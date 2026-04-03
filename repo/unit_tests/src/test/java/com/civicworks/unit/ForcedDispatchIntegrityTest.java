@@ -66,11 +66,13 @@ class ForcedDispatchIntegrityTest {
         User designatedDriver = new User();
         designatedDriver.setId(designatedDriverId);
         designatedDriver.setRating(4.8);
+        designatedDriver.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
         when(userRepository.findById(designatedDriverId)).thenReturn(Optional.of(designatedDriver));
 
         User otherDriver = new User();
         otherDriver.setId(otherDriverId);
         otherDriver.setRating(4.8);
+        otherDriver.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
         when(userRepository.findById(otherDriverId)).thenReturn(Optional.of(otherDriver));
 
         when(driverOnlineSessionRepository.sumMinutesForDriverOnDate(any(), any(LocalDate.class))).thenReturn(60.0);
@@ -172,6 +174,7 @@ class ForcedDispatchIntegrityTest {
         User u = new User();
         u.setId(id);
         u.setRating(4.8);
+        u.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
         return u;
     }
 

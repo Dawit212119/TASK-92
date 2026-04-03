@@ -18,6 +18,9 @@ public class AuditLog {
     @Column(name = "actor_id")
     private UUID actorId;
 
+    @Column(name = "organization_id")
+    private UUID organizationId;
+
     @Column(name = "action", nullable = false)
     private String action;
 
@@ -38,6 +41,9 @@ public class AuditLog {
 
     public UUID getActorId() { return actorId; }
     public void setActorId(UUID actorId) { this.actorId = actorId; }
+
+    public UUID getOrganizationId() { return organizationId; }
+    public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
 
     public String getAction() { return action; }
     public void setAction(String action) { this.action = action; }

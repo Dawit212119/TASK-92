@@ -171,6 +171,7 @@ class ShiftHandoverSummaryTest {
     private User actor() {
         User u = new User();
         u.setId(actorId);
+        u.setRole(Role.SYSTEM_ADMIN);
         return u;
     }
 }

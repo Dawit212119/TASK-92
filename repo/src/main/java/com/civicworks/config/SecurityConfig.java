@@ -50,9 +50,11 @@ public class SecurityConfig {
         return username -> {
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+            boolean enabled = "ACTIVE".equals(user.getStatus());
             return org.springframework.security.core.userdetails.User.builder()
                     .username(user.getUsername())
                     .password(user.getPasswordHash())
+                    .disabled(!enabled)
                     .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
                     .build();
         };

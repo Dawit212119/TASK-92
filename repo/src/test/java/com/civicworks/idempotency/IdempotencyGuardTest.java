@@ -70,7 +70,7 @@ class IdempotencyGuardTest {
     @Test
     void execute_newKey_executesActionAndPersists() {
         String key = UUID.randomUUID().toString();
-        when(idempotencyService.findExisting(userId, key)).thenReturn(Optional.empty());
+        when(idempotencyService.findExisting(eq(userId), eq(key), anyString())).thenReturn(Optional.empty());
 
         AtomicInteger callCount = new AtomicInteger(0);
         ResponseEntity<String> result = guard.execute(key, userId, "CREATE_THING", () -> {
@@ -98,7 +98,7 @@ class IdempotencyGuardTest {
         cached.setResponseStatus(201);
         cached.setResponseBody(objectMapper.writeValueAsString("created"));
 
-        when(idempotencyService.findExisting(userId, key)).thenReturn(Optional.of(cached));
+        when(idempotencyService.findExisting(eq(userId), eq(key), anyString())).thenReturn(Optional.of(cached));
 
         AtomicInteger callCount = new AtomicInteger(0);
         ResponseEntity<Object> result = guard.execute(key, userId, "CREATE_THING", () -> {
@@ -123,7 +123,7 @@ class IdempotencyGuardTest {
         cached.setResponseStatus(200);
         cached.setResponseBody(objectMapper.writeValueAsString(42));
 
-        when(idempotencyService.findExisting(userId, key)).thenReturn(Optional.of(cached));
+        when(idempotencyService.findExisting(eq(userId), eq(key), anyString())).thenReturn(Optional.of(cached));
 
         ResponseEntity<Object> result = guard.execute(key, userId, "SOME_ACTION", () ->
                 ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("should-not-reach"));
@@ -141,8 +141,8 @@ class IdempotencyGuardTest {
         UUID userId1 = UUID.randomUUID();
         UUID userId2 = UUID.randomUUID();
 
-        when(idempotencyService.findExisting(userId1, key)).thenReturn(Optional.empty());
-        when(idempotencyService.findExisting(userId2, key)).thenReturn(Optional.empty());
+        when(idempotencyService.findExisting(eq(userId1), eq(key), anyString())).thenReturn(Optional.empty());
+        when(idempotencyService.findExisting(eq(userId2), eq(key), anyString())).thenReturn(Optional.empty());
 
         guard.execute(key, userId1, "ACTION", () -> ResponseEntity.ok("u1"));
         guard.execute(key, userId2, "ACTION", () -> ResponseEntity.ok("u2"));
@@ -166,7 +166,7 @@ class IdempotencyGuardTest {
         cached.setResponseStatus(201);
         cached.setResponseBody("{this is not valid json{{{{");
 
-        when(idempotencyService.findExisting(userId, key)).thenReturn(Optional.of(cached));
+        when(idempotencyService.findExisting(eq(userId), eq(key), anyString())).thenReturn(Optional.of(cached));
         when(idempotencyService.save(any(), any(), any(), anyInt(), any())).thenReturn(cached);
 
         AtomicInteger callCount = new AtomicInteger(0);

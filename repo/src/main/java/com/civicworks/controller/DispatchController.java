@@ -120,13 +120,17 @@ public class DispatchController {
 
     @GetMapping("/dispatch/queues")
     @PreAuthorize("hasRole('DISPATCHER') or hasRole('DRIVER') or hasRole('SYSTEM_ADMIN')")
-    public ResponseEntity<List<ZoneQueue>> getQueue(@RequestParam UUID zoneId) {
-        return ResponseEntity.ok(dispatchService.getQueueForZone(zoneId));
+    public ResponseEntity<List<ZoneQueue>> getQueue(@RequestParam UUID zoneId,
+                                                     Authentication authentication) {
+        User actor = authUtils.resolveUser(authentication);
+        return ResponseEntity.ok(dispatchService.getQueueForZone(zoneId, actor));
     }
 
     @GetMapping("/drivers/{driverId}/eligibility")
     @PreAuthorize("hasRole('DISPATCHER') or hasRole('DRIVER') or hasRole('SYSTEM_ADMIN')")
-    public ResponseEntity<Map<String, Object>> getDriverEligibility(@PathVariable UUID driverId) {
-        return ResponseEntity.ok(dispatchService.checkDriverEligibility(driverId));
+    public ResponseEntity<Map<String, Object>> getDriverEligibility(@PathVariable UUID driverId,
+                                                                      Authentication authentication) {
+        User actor = authUtils.resolveUser(authentication);
+        return ResponseEntity.ok(dispatchService.checkDriverEligibility(actor, driverId));
     }
 }

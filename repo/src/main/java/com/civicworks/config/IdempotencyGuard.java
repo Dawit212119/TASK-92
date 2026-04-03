@@ -64,8 +64,11 @@ public class IdempotencyGuard {
                     HttpStatus.BAD_REQUEST, "IDEMPOTENCY_KEY_REQUIRED");
         }
 
-        // Check for an existing record with this key for this user.
-        Optional<IdempotencyRecord> existing = idempotencyService.findExisting(userId, idempotencyKey);
+        // Reject cross-action reuse of the same key before anything else.
+        idempotencyService.checkForActionConflict(userId, idempotencyKey, actionType);
+
+        // Check for an existing record with this key for this user and action.
+        Optional<IdempotencyRecord> existing = idempotencyService.findExisting(userId, idempotencyKey, actionType);
         if (existing.isPresent()) {
             IdempotencyRecord record = existing.get();
             log.info("IDEMPOTENCY_REPLAY key={} actionType={} userId={}", idempotencyKey, actionType, userId);

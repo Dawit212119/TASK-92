@@ -66,6 +66,7 @@ class DispatchPickupCoordTest {
         driver = new User();
         driver.setId(driverId);
         driver.setRating(4.8);
+        driver.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
 
         when(userRepository.findById(driverId)).thenReturn(Optional.of(driver));
         when(driverOnlineSessionRepository.sumMinutesForDriverOnDate(

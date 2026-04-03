@@ -4,6 +4,7 @@ import com.civicworks.domain.entity.*;
 import com.civicworks.domain.enums.OrderMode;
 import com.civicworks.domain.enums.OrderStatus;
 import com.civicworks.domain.enums.RejectionReason;
+import com.civicworks.domain.enums.Role;
 import com.civicworks.dto.AcceptOrderRequest;
 import com.civicworks.dto.CreateDispatchOrderRequest;
 import com.civicworks.dto.RejectOrderRequest;
@@ -396,6 +397,39 @@ public class DispatchService {
     @Transactional(readOnly = true)
     public List<ZoneQueue> getQueueForZone(UUID zoneId) {
         return zoneQueueRepository.findByZoneIdAndStatusOrderByQueuePosition(zoneId, "WAITING");
+    }
+
+    @Transactional(readOnly = true)
+    public List<ZoneQueue> getQueueForZone(UUID zoneId, User actor) {
+        UUID orgId = AuthorizationService.resolveOrgId(actor);
+        if (orgId == null) {
+            return getQueueForZone(zoneId);
+        }
+        return zoneQueueRepository.findByZoneAndStatusAndOrg(zoneId, "WAITING", orgId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> checkDriverEligibility(User actor, UUID driverId) {
+        if (actor.getRole() == Role.DRIVER && !driverId.equals(actor.getId())) {
+            throw new BusinessException(
+                    "Drivers may only query their own eligibility",
+                    HttpStatus.FORBIDDEN, "DRIVER_SELF_ONLY");
+        }
+        if (actor.getRole() == Role.DISPATCHER) {
+            UUID dispatcherOrgId = AuthorizationService.resolveOrgId(actor);
+            if (dispatcherOrgId != null) {
+                User driver = userRepository.findById(driverId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Driver", driverId));
+                UUID driverOrgId = driver.getOrganization() != null
+                        ? driver.getOrganization().getId() : null;
+                if (!dispatcherOrgId.equals(driverOrgId)) {
+                    throw new BusinessException(
+                            "Dispatchers may only query drivers within their own organization",
+                            HttpStatus.FORBIDDEN, "DISPATCH_CROSS_TENANT_FORBIDDEN");
+                }
+            }
+        }
+        return checkDriverEligibility(driverId);
     }
 
     /**

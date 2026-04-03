@@ -295,6 +295,7 @@ class PaymentSplitTest {
     private User actor() {
         User u = new User();
         u.setId(actorId);
+        u.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
         return u;
     }
 

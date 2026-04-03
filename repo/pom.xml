@@ -90,7 +90,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
                 <configuration>
+                    <!-- Reduces "Corrupted channel by directly writing to native stream" on Windows + newer JDKs. -->
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <argLine>
                         -Xmx512m
                         -XX:+EnableDynamicAgentLoading

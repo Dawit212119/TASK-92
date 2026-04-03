@@ -19,14 +19,21 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
     Page<AuditLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-    @Query("SELECT a FROM AuditLog a WHERE " +
-           "(:entityRef IS NULL OR a.entityRef = :entityRef) AND " +
-           "(:action IS NULL OR a.action = :action) AND " +
-           "(:from IS NULL OR a.createdAt >= :from) AND " +
-           "(:to IS NULL OR a.createdAt <= :to)")
-    Page<AuditLog> findWithFilters(@Param("entityRef") String entityRef,
-                                    @Param("action") String action,
-                                    @Param("from") OffsetDateTime from,
-                                    @Param("to") OffsetDateTime to,
-                                    Pageable pageable);
+    Page<AuditLog> findAllByOrganizationIdOrderByCreatedAtDesc(UUID organizationId, Pageable pageable);
+
+    @Query("""
+           SELECT a FROM AuditLog a
+           WHERE (:orgId IS NULL OR a.organizationId = :orgId)
+             AND (:entityRef IS NULL OR a.entityRef = :entityRef)
+             AND (:action IS NULL OR a.action = :action)
+             AND (:from IS NULL OR a.createdAt >= :from)
+             AND (:to IS NULL OR a.createdAt <= :to)
+           ORDER BY a.createdAt DESC
+           """)
+    Page<AuditLog> findWithFilters(@Param("orgId") UUID orgId,
+                                   @Param("entityRef") String entityRef,
+                                   @Param("action") String action,
+                                   @Param("from") OffsetDateTime from,
+                                   @Param("to") OffsetDateTime to,
+                                   Pageable pageable);
 }

@@ -1,7 +1,9 @@
 package com.civicworks.service;
 
 import com.civicworks.domain.entity.AuditLog;
+import com.civicworks.domain.entity.User;
 import com.civicworks.repository.AuditLogRepository;
+import com.civicworks.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -22,10 +24,13 @@ public class AuditService {
     private static final Logger log = LoggerFactory.getLogger(AuditService.class);
 
     private final AuditLogRepository auditLogRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
-    public AuditService(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
+    public AuditService(AuditLogRepository auditLogRepository, UserRepository userRepository,
+                        ObjectMapper objectMapper) {
         this.auditLogRepository = auditLogRepository;
+        this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -33,6 +38,7 @@ public class AuditService {
     public void log(UUID actorId, String action, String entityRef, Map<String, Object> details) {
         AuditLog entry = new AuditLog();
         entry.setActorId(actorId);
+        entry.setOrganizationId(resolveOrgIdForActor(actorId));
         entry.setAction(action);
         entry.setEntityRef(entityRef);
         try {
@@ -46,9 +52,9 @@ public class AuditService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(UUID actorId, String action, String entityRef, String rawJson) {
-        // Backward-compatible overload — stores as-is (caller is responsible for valid JSON)
         AuditLog entry = new AuditLog();
         entry.setActorId(actorId);
+        entry.setOrganizationId(resolveOrgIdForActor(actorId));
         entry.setAction(action);
         entry.setEntityRef(entityRef);
         entry.setDetails(rawJson);
@@ -57,14 +63,26 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AuditLog> findAll(Pageable pageable) {
-        return auditLogRepository.findAllByOrderByCreatedAtDesc(pageable);
+    public Page<AuditLog> findAll(User actor, Pageable pageable) {
+        UUID orgId = AuthorizationService.resolveOrgId(actor);
+        if (orgId == null) {
+            return auditLogRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+        return auditLogRepository.findAllByOrganizationIdOrderByCreatedAtDesc(orgId, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Page<AuditLog> findWithFilters(String entityRef, String action,
+    public Page<AuditLog> findWithFilters(User actor, String entityRef, String action,
                                            OffsetDateTime from, OffsetDateTime to,
                                            Pageable pageable) {
-        return auditLogRepository.findWithFilters(entityRef, action, from, to, pageable);
+        UUID orgId = AuthorizationService.resolveOrgId(actor);
+        return auditLogRepository.findWithFilters(orgId, entityRef, action, from, to, pageable);
+    }
+
+    private UUID resolveOrgIdForActor(UUID actorId) {
+        if (actorId == null) return null;
+        return userRepository.findById(actorId)
+                .map(user -> user.getOrganization() != null ? user.getOrganization().getId() : null)
+                .orElse(null);
     }
 }

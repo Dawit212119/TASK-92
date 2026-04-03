@@ -27,6 +27,16 @@ public interface KpiReportRepository extends JpaRepository<KpiReport, UUID> {
             """)
     List<KpiReport> findLatestPerOrganization();
 
+    @Query("""
+            SELECT k FROM KpiReport k
+            WHERE k.organizationId = :orgId
+              AND k.weekStart = (
+                  SELECT MAX(k2.weekStart) FROM KpiReport k2
+                  WHERE k2.organizationId = :orgId
+              )
+            """)
+    Optional<KpiReport> findLatestForOrganization(@Param("orgId") UUID orgId);
+
     @Query("SELECT COALESCE(SUM(b.balanceCents), 0) FROM Bill b " +
            "WHERE b.organizationId = :orgId AND b.status IN ('OPEN', 'OVERDUE')")
     long sumArrearsByOrganization(@Param("orgId") UUID orgId);

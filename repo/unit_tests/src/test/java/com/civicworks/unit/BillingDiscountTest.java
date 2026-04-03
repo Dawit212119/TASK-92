@@ -191,6 +191,7 @@ class BillingDiscountTest {
     private com.civicworks.domain.entity.User actorUser() {
         com.civicworks.domain.entity.User u = new com.civicworks.domain.entity.User();
         u.setId(actorId);
+        u.setRole(com.civicworks.domain.enums.Role.SYSTEM_ADMIN);
         return u;
     }
 

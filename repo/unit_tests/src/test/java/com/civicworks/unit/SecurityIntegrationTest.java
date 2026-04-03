@@ -278,6 +278,7 @@ class SecurityIntegrationTest {
             User d = new User();
             d.setId(id);
             d.setRating(4.8);
+            d.setRole(Role.SYSTEM_ADMIN);
             when(userRepository.findById(id)).thenReturn(Optional.of(d));
             when(driverOnlineSessionRepository.sumMinutesForDriverOnDate(eq(id), any(LocalDate.class))).thenReturn(60.0);
             when(driverCooldownRepository.existsByDriverIdAndCooldownUntilAfter(eq(id), any(OffsetDateTime.class))).thenReturn(false);
@@ -365,6 +366,7 @@ class SecurityIntegrationTest {
     static User driver(UUID id) {
         User u = new User();
         u.setId(id);
+        u.setRole(Role.SYSTEM_ADMIN);
         return u;
     }
 

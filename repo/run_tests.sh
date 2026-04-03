@@ -49,28 +49,54 @@ else
   docker compose up -d
 fi
 
-# ── 2. Wait for app on the HOST published port (matches docker-compose) ─────
-# Do not use `docker compose exec app bash`: eclipse-temurin:17-jre often has no bash,
-# so exec fails silently and this script would time out. Wait on localhost instead.
+# ── 2. Wait for app ready (health), then Flyway schema in Postgres ───────────
+# Raw TCP open is insufficient: another process can hold the port, or Tomcat can
+# race with Flyway in odd environments. Prefer /actuator/health (permitAll in SecurityConfig).
 HOST_APP_PORT="${HOST_APP_PORT:-18080}"
-info "Waiting for app on host port ${HOST_APP_PORT} (container internal port is still 8080)..."
+HEALTH_URL="http://127.0.0.1:${HOST_APP_PORT}/actuator/health"
+
+app_ready() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -sf "$HEALTH_URL" >/dev/null 2>&1
+  else
+    (echo >/dev/tcp/127.0.0.1/"${HOST_APP_PORT}") 2>/dev/null
+  fi
+}
+
+info "Waiting for app health on ${HEALTH_URL} (fallback: TCP ${HOST_APP_PORT})..."
 MAX_WAIT=180
 WAIT=0
-until (echo >/dev/tcp/127.0.0.1/"${HOST_APP_PORT}") 2>/dev/null; do
+until app_ready; do
   sleep 3
   WAIT=$((WAIT + 3))
   if [[ $WAIT -ge $MAX_WAIT ]]; then
-    fail "App did not start within ${MAX_WAIT}s. Showing logs:"
+    fail "App did not become healthy within ${MAX_WAIT}s. Showing logs:"
     docker compose logs app | tail -40
     exit 1
   fi
   echo -n "."
 done
 echo ""
-info "App is up (waited ${WAIT}s)."
+info "App responded (waited ${WAIT}s). Waiting for Flyway table 'accounts' in Postgres..."
 
-# Allow Spring Boot a few extra seconds to finish Flyway migrations
-sleep 5
+MAX_SCHEMA_WAIT=120
+SCHEMA_WAIT=0
+while true; do
+  tbl=$(docker compose exec -T db psql -U civicworks -d civicworks -tAc \
+    "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='accounts'" \
+    2>/dev/null | tr -d '[:space:]' || true)
+  [[ "$tbl" == "1" ]] && break
+  sleep 2
+  SCHEMA_WAIT=$((SCHEMA_WAIT + 2))
+  if [[ $SCHEMA_WAIT -ge $MAX_SCHEMA_WAIT ]]; then
+    fail "accounts table not found after ${MAX_SCHEMA_WAIT}s (Flyway not applied?). App logs:"
+    docker compose logs app | tail -50
+    exit 1
+  fi
+  echo -n "."
+done
+echo ""
+info "Database schema ready (waited ${SCHEMA_WAIT}s for migrations)."
 
 # ── 3. Seed test data ────────────────────────────────────────────────────────
 info "Seeding test data..."
@@ -83,18 +109,26 @@ info "Running unit tests (Maven / JUnit)..."
 info "========================================="
 
 MVN_OUTPUT=$(mktemp)
-if mvn test -q 2>&1 | tee "$MVN_OUTPUT"; then
+# Do not use `mvn -q` here: quiet mode omits Surefire "Tests run:" lines, so the
+# count parsing below would get no matches; `grep` exits 1 and `set -e` aborts
+# the script after a successful test run (false CI failure).
+if mvn -B test 2>&1 | tee "$MVN_OUTPUT"; then
   pass "All JUnit unit tests passed."
 else
   UNIT_EXIT=1
   fail "Some JUnit unit tests failed."
 fi
 
-# Extract counts from Maven output
-UNIT_TOTAL=$(grep -oP 'Tests run: \K[0-9]+' "$MVN_OUTPUT" | awk '{s+=$1}END{print s}')
-UNIT_FAILED=$(grep -oP 'Failures: \K[0-9]+' "$MVN_OUTPUT" | awk '{s+=$1}END{print s}')
-UNIT_ERRORS=$(grep -oP 'Errors: \K[0-9]+' "$MVN_OUTPUT" | awk '{s+=$1}END{print s}')
-UNIT_PASSED=$(( ${UNIT_TOTAL:-0} - ${UNIT_FAILED:-0} - ${UNIT_ERRORS:-0} ))
+# Extract counts from Maven output (bash regex — never fails on "no match" like grep -P)
+UNIT_TOTAL=0
+UNIT_FAILED=0
+UNIT_ERRORS=0
+while IFS= read -r line; do
+  [[ $line =~ Tests\ run:\ ([0-9]+) ]] && UNIT_TOTAL=$((UNIT_TOTAL + ${BASH_REMATCH[1]}))
+  [[ $line =~ Failures:\ ([0-9]+) ]] && UNIT_FAILED=$((UNIT_FAILED + ${BASH_REMATCH[1]}))
+  [[ $line =~ Errors:\ ([0-9]+) ]] && UNIT_ERRORS=$((UNIT_ERRORS + ${BASH_REMATCH[1]}))
+done < "$MVN_OUTPUT"
+UNIT_PASSED=$(( UNIT_TOTAL - UNIT_FAILED - UNIT_ERRORS ))
 rm -f "$MVN_OUTPUT"
 
 # ── 5. API tests (pytest inside Docker) ──────────────────────────────────────
@@ -130,11 +164,14 @@ else
   fail "Some API tests failed."
 fi
 
-# Extract pytest summary line
+# Extract pytest summary line (avoid grep -P for macOS/BSD compatibility)
 PYTEST_SUMMARY=$(grep -E '^=+ .*(passed|failed|error)' "$PYTEST_OUTPUT" | tail -1 || echo "No summary line found")
-API_PASSED=$(echo "$PYTEST_SUMMARY" | grep -oP '[0-9]+ passed' | grep -oP '[0-9]+' || echo 0)
-API_FAILED=$(echo "$PYTEST_SUMMARY" | grep -oP '[0-9]+ failed' | grep -oP '[0-9]+' || echo 0)
-API_ERRORS=$(echo "$PYTEST_SUMMARY" | grep -oP '[0-9]+ error' | grep -oP '[0-9]+' || echo 0)
+API_PASSED=0
+API_FAILED=0
+API_ERRORS=0
+[[ $PYTEST_SUMMARY =~ ([0-9]+)\ passed ]] && API_PASSED=${BASH_REMATCH[1]}
+[[ $PYTEST_SUMMARY =~ ([0-9]+)\ failed ]] && API_FAILED=${BASH_REMATCH[1]}
+[[ $PYTEST_SUMMARY =~ ([0-9]+)\ errors? ]] && API_ERRORS=${BASH_REMATCH[1]}
 rm -f "$PYTEST_OUTPUT"
 
 # ── 6. Summary ────────────────────────────────────────────────────────────────
