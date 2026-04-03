@@ -3,7 +3,6 @@
 convert_ai_session.py
 
 # Local AI / editor session dumps
-sessions/
 .claude/
 .cursor/
 
